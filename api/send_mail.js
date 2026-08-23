@@ -2,19 +2,17 @@ const nodemailer = require('nodemailer');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const { subject, content, sender, senderName, sender_name, sendemame } = req.body || req.query || {};
+  const { subject, content, sender, to } = req.query;
 
   if (!subject || !content) {
-    return res.status(400).json({ error: '缺少 subject 或 content 参数' });
+    return res.status(400).json({ error: '缺少 subject 或 content' });
   }
-
-  const displayName = sender || senderName || sender_name || sendemame || 'Ccc-ke';
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.qq.com',
@@ -26,16 +24,17 @@ module.exports = async (req, res) => {
     }
   });
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"${displayName}" <${process.env.QQ_EMAIL}>`,
-      to: process.env.TO_EMAIL || process.env.QQ_EMAIL,
-      subject: subject,
-      text: content
-    });
+  const mailOptions = {
+    from: `${sender || 'Ccc-ke'} <${process.env.QQ_EMAIL}>`,
+    to: to || process.env.QQ_EMAIL,
+    subject: subject,
+    text: content
+  };
 
-    return res.status(200).json({ success: true, messageId: info.messageId });
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
